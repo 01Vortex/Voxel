@@ -1,6 +1,6 @@
 import { createApp } from 'vue'
 import App from './App.vue'
-import { setApiBase } from './client'
+import { setApiBase } from './utils/api'
 
 // 设置后端 API 地址
 setApiBase('http://localhost:3000')

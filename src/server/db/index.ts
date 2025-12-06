@@ -20,8 +20,8 @@ export interface CommentRow {
 }
 
 export async function initDatabase(): Promise<void> {
-  // 数据库放在 src/db 目录下
-  const dbPath = process.env.DB_PATH || path.join(__dirname, '../../db/voxel.db')
+  // 数据库放在 src/server/data 目录下
+  const dbPath = process.env.DB_PATH || path.join(__dirname, '../data/voxel.db')
   
   // 确保目录存在
   const dbDir = path.dirname(dbPath)

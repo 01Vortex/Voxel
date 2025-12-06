@@ -5,187 +5,143 @@
       <div v-if="loading" class="voxel-loading">加载中...</div>
       <div v-else-if="comments.length === 0" class="voxel-empty">暂无评论，快来抢沙发~</div>
       <template v-else>
-        <div
-          v-for="comment in comments"
-          :key="comment.id"
-          class="voxel-message"
-          :class="{ 'is-self': comment.isOwner }"
-        >
-          <img
-            v-if="!comment.isOwner"
-            class="voxel-avatar"
-            :src="comment.avatar"
-            :alt="comment.nickname"
-          />
-          <div class="voxel-bubble">
-            <span class="voxel-content">{{ comment.content }}</span>
+        <template v-for="(comment, index) in comments" :key="comment.id">
+          <!-- 时间分隔线 -->
+          <div v-if="shouldShowTime(index)" class="voxel-time-divider">
+            <span>{{ formatTime(comment.createdAt) }}</span>
           </div>
-          <img
-            v-if="comment.isOwner"
-            class="voxel-avatar"
-            :src="comment.avatar"
-            :alt="comment.nickname"
-          />
-        </div>
+          <!-- 消息 -->
+          <div class="voxel-message" :class="{ 'is-self': comment.isOwner }">
+            <img class="voxel-avatar" :src="comment.avatar" :alt="comment.nickname" />
+            <div class="voxel-body">
+              <div class="voxel-nickname">
+                <span class="voxel-name">{{ comment.nickname }}</span>
+                <span v-if="comment.note" class="voxel-note">{{ comment.note }}</span>
+              </div>
+              <div class="voxel-bubble">
+                <span class="voxel-content" v-html="renderContent(comment.content)"></span>
+              </div>
+            </div>
+          </div>
+        </template>
       </template>
     </div>
 
     <!-- 输入区域 -->
     <div class="voxel-input-area">
       <div class="voxel-input-row">
-        <input
-          v-model="form.email"
-          type="email"
-          class="voxel-input"
-          placeholder="输入邮箱号"
-          @blur="onEmailBlur"
-        />
-        <input
-          v-model="form.nickname"
-          type="text"
-          class="voxel-input"
-          placeholder="输入昵称"
-        />
-        <input
-          v-model="form.note"
-          type="text"
-          class="voxel-input voxel-input-note"
-          placeholder="备注"
-        />
+        <input v-model="form.email" type="email" class="voxel-input" placeholder="邮箱" />
+        <input v-model="form.nickname" type="text" class="voxel-input" placeholder="昵称" />
+        <input v-model="form.note" type="text" class="voxel-input voxel-input-note" placeholder="备注" />
       </div>
-      <div class="voxel-textarea-row">
+      <div class="voxel-editor-row">
         <textarea
+          ref="textareaRef"
           v-model="form.content"
           class="voxel-textarea"
-          placeholder="说点什么..."
-          @keydown.ctrl.enter="submit"
-          @input="onContentInput"
+          placeholder="说点什么... (Ctrl+Enter 发送)"
+          @keydown.ctrl.enter="handleSubmit"
+          @input="saveContentDraft"
         ></textarea>
-        <button class="voxel-submit" @click="submit" :disabled="submitting">
-          {{ submitting ? '...' : '发送' }}
-          <span class="voxel-submit-arrow">∨</span>
-        </button>
+        <div class="voxel-actions">
+          <div class="voxel-actions-right">
+            <div class="voxel-toolbar">
+              <div class="voxel-emoji-wrapper" ref="emojiWrapperRef">
+                <button class="voxel-tool-btn" @click.stop="showEmoji = !showEmoji" title="表情">😊</button>
+                <div v-if="showEmoji" class="voxel-emoji-popup">
+                  <div class="voxel-emoji-tabs">
+                    <button
+                      v-for="(cat, idx) in emojiCategories"
+                      :key="cat.name"
+                      class="voxel-emoji-tab"
+                      :class="{ active: emojiTab === idx }"
+                      @click.stop="emojiTab = idx"
+                      :title="cat.name"
+                    >{{ cat.icon }}</button>
+                  </div>
+                  <div class="voxel-emoji-list">
+                    <span
+                      v-for="emoji in currentEmojis"
+                      :key="emoji"
+                      class="voxel-emoji-item"
+                      @click.stop="insertEmoji(emoji)"
+                    >{{ emoji }}</span>
+                  </div>
+                </div>
+              </div>
+              <button class="voxel-tool-btn" @click="triggerImageUpload" title="图片">🖼️</button>
+              <input
+                ref="imageInputRef"
+                type="file"
+                accept="image/*"
+                style="display: none"
+                @change="handleImageUpload"
+              />
+            </div>
+            <button class="voxel-submit" @click="handleSubmit" :disabled="submitting">
+              {{ submitting ? '...' : '发送' }}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import type { Comment } from '../types'
-import {
-  getComments,
-  postComment,
-  getAvatar,
-  saveUser,
-  getUser,
-  saveDraft,
-  getDraft,
-  clearDraft,
-  md5
-} from '../utils'
+import { useComment } from '../composables/useComment'
+import { setApiBase } from '../utils/api'
+import { formatTime as formatTimeUtil } from '../utils/time'
+import { renderContent } from '../utils/content'
+import { emojiCategories } from '../constants/emoji'
 
 const props = defineProps<{
   url?: string
   apiBase?: string
 }>()
 
-const messagesRef = ref<HTMLElement>()
-const loading = ref(true)
-const submitting = ref(false)
-const comments = ref<Comment[]>([])
+// 设置 API 地址
+if (props.apiBase) {
+  setApiBase(props.apiBase)
+}
 
-const form = reactive({
-  email: '',
-  nickname: '',
-  note: '',
-  content: ''
-})
-
-// 当前页面URL
 const pageUrl = props.url || window.location.pathname
 
-// 初始化
-onMounted(async () => {
-  // 恢复用户信息
-  const savedUser = getUser()
-  if (savedUser) {
-    form.email = savedUser.email
-    form.nickname = savedUser.nickname
-  }
-  
-  // 恢复草稿
-  form.content = getDraft(pageUrl)
-  
-  // 加载评论
-  await loadComments()
-})
+const {
+  loading,
+  submitting,
+  comments,
+  form,
+  loadComments,
+  submitComment,
+  initForm,
+  saveContentDraft
+} = useComment(pageUrl)
 
-// 加载评论
-async function loadComments() {
-  loading.value = true
-  try {
-    const list = await getComments(pageUrl)
-    // 标记当前用户的评论（通过 emailHash 比较）
-    const userEmailHash = form.email ? md5(form.email.trim().toLowerCase()) : ''
-    comments.value = list.map(c => ({
-      ...c,
-      isOwner: userEmailHash && c.emailHash === userEmailHash
-    }))
-    scrollToBottom()
-  } catch (e) {
-    console.error('加载评论失败:', e)
-  } finally {
-    loading.value = false
-  }
+// DOM refs
+const messagesRef = ref<HTMLElement>()
+const textareaRef = ref<HTMLTextAreaElement>()
+const imageInputRef = ref<HTMLInputElement>()
+const emojiWrapperRef = ref<HTMLElement>()
+
+// 表情相关
+const showEmoji = ref(false)
+const emojiTab = ref(0)
+const currentEmojis = computed(() => emojiCategories[emojiTab.value]?.emojis || [])
+
+// 时间格式化
+function formatTime(timestamp: number): string {
+  return formatTimeUtil(timestamp)
 }
 
-// 邮箱失焦时获取头像
-function onEmailBlur() {
-  // 可以在这里预览头像
-}
-
-// 内容输入时保存草稿
-function onContentInput() {
-  saveDraft(pageUrl, form.content)
-}
-
-// 提交评论
-async function submit() {
-  if (!form.content.trim()) return
-  if (!form.email.trim() || !form.nickname.trim()) {
-    alert('请填写邮箱和昵称')
-    return
-  }
-  
-  submitting.value = true
-  try {
-    const newComment = await postComment({
-      content: form.content.trim(),
-      email: form.email.trim(),
-      nickname: form.nickname.trim(),
-      url: pageUrl,
-      note: form.note.trim()
-    })
-    
-    // 添加到列表
-    newComment.isOwner = true
-    newComment.avatar = getAvatar(form.email)
-    comments.value.push(newComment)
-    
-    // 保存用户信息
-    saveUser({ email: form.email, nickname: form.nickname })
-    
-    // 清空内容和草稿
-    form.content = ''
-    clearDraft(pageUrl)
-    
-    scrollToBottom()
-  } catch (e: any) {
-    alert(e.message || '发送失败')
-  } finally {
-    submitting.value = false
-  }
+// 判断是否显示时间分隔（超过5分钟显示）
+function shouldShowTime(index: number): boolean {
+  if (index === 0) return true
+  const current = comments.value[index]
+  const prev = comments.value[index - 1]
+  return current.createdAt - prev.createdAt > 5 * 60 * 1000
 }
 
 // 滚动到底部
@@ -196,23 +152,91 @@ function scrollToBottom() {
     }
   })
 }
+
+// 提交评论
+async function handleSubmit() {
+  const success = await submitComment()
+  if (success) {
+    scrollToBottom()
+  }
+}
+
+// 插入表情
+function insertEmoji(emoji: string) {
+  const textarea = textareaRef.value
+  if (textarea) {
+    const start = textarea.selectionStart
+    const end = textarea.selectionEnd
+    form.content = form.content.slice(0, start) + emoji + form.content.slice(end)
+    nextTick(() => {
+      textarea.focus()
+      textarea.setSelectionRange(start + emoji.length, start + emoji.length)
+    })
+  } else {
+    form.content += emoji
+  }
+}
+
+// 触发图片上传
+function triggerImageUpload() {
+  imageInputRef.value?.click()
+}
+
+// 处理图片上传
+function handleImageUpload(e: Event) {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+
+  if (file.size > 2 * 1024 * 1024) {
+    alert('图片大小不能超过 2MB')
+    return
+  }
+
+  const reader = new FileReader()
+  reader.onload = () => {
+    const base64 = reader.result as string
+    form.content += `[img]${base64}[/img]`
+    saveContentDraft()
+  }
+  reader.readAsDataURL(file)
+  input.value = ''
+}
+
+// 点击外部关闭表情弹窗
+function handleClickOutside(e: MouseEvent) {
+  if (showEmoji.value && emojiWrapperRef.value && !emojiWrapperRef.value.contains(e.target as Node)) {
+    showEmoji.value = false
+  }
+}
+
+onMounted(async () => {
+  initForm()
+  await loadComments()
+  scrollToBottom()
+  document.addEventListener('click', handleClickOutside)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
+})
 </script>
 
 <style scoped>
 .voxel-comment {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  min-height: 500px;
+  height: 500px;
+  max-height: 500px;
   background: linear-gradient(180deg, #d4f1f9 0%, #e8f7fc 100%);
   border-radius: 8px;
   overflow: hidden;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
-/* 消息列表 */
 .voxel-messages {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: 20px;
   display: flex;
@@ -227,7 +251,19 @@ function scrollToBottom() {
   padding: 40px;
 }
 
-/* 单条消息 */
+.voxel-time-divider {
+  text-align: center;
+  padding: 8px 0;
+}
+
+.voxel-time-divider span {
+  font-size: 12px;
+  color: #999;
+  background: rgba(255, 255, 255, 0.6);
+  padding: 4px 12px;
+  border-radius: 10px;
+}
+
 .voxel-message {
   display: flex;
   align-items: flex-start;
@@ -240,7 +276,6 @@ function scrollToBottom() {
   flex-direction: row-reverse;
 }
 
-/* 头像 */
 .voxel-avatar {
   width: 40px;
   height: 40px;
@@ -249,7 +284,36 @@ function scrollToBottom() {
   object-fit: cover;
 }
 
-/* 气泡 */
+.voxel-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.voxel-nickname {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.voxel-name {
+  font-size: 13px;
+  color: #333;
+  font-weight: 500;
+}
+
+.voxel-note {
+  font-size: 11px;
+  color: #999;
+  background: #f0f0f0;
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+
+.voxel-message.is-self .voxel-nickname {
+  flex-direction: row-reverse;
+}
+
 .voxel-bubble {
   background: #fff;
   padding: 10px 14px;
@@ -269,11 +333,93 @@ function scrollToBottom() {
   line-height: 1.5;
 }
 
-/* 输入区域 */
+.voxel-content :deep(.voxel-img) {
+  max-width: 200px;
+  max-height: 200px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: block;
+  margin: 4px 0;
+}
+
+.voxel-emoji-wrapper {
+  position: relative;
+}
+
+.voxel-emoji-popup {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 8px;
+  width: 340px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  z-index: 100;
+  overflow: hidden;
+}
+
+.voxel-emoji-tabs {
+  display: flex;
+  padding: 8px 12px;
+  gap: 4px;
+  border-bottom: 1px solid #f0f0f0;
+  background: #fafafa;
+}
+
+.voxel-emoji-tab {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 20px;
+  transition: all 0.2s;
+}
+
+.voxel-emoji-tab:hover {
+  background: #e8e8e8;
+}
+
+.voxel-emoji-tab.active {
+  background: #12b7f5;
+}
+
+.voxel-emoji-list {
+  display: flex;
+  flex-wrap: wrap;
+  padding: 12px;
+  max-height: 180px;
+  overflow-y: auto;
+  gap: 4px;
+}
+
+.voxel-emoji-item {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 6px;
+  font-size: 22px;
+  transition: all 0.2s;
+}
+
+.voxel-emoji-item:hover {
+  background: #f0f0f0;
+  transform: scale(1.2);
+}
+
 .voxel-input-area {
+  flex-shrink: 0;
   background: #fff;
   border-top: 1px solid #e0e0e0;
-  padding: 0;
 }
 
 .voxel-input-row {
@@ -283,11 +429,12 @@ function scrollToBottom() {
 
 .voxel-input {
   flex: 1;
-  padding: 12px 16px;
+  padding: 10px 12px;
   border: none;
   outline: none;
-  font-size: 14px;
+  font-size: 13px;
   border-right: 1px solid #e0e0e0;
+  min-width: 0;
 }
 
 .voxel-input:last-child {
@@ -295,46 +442,80 @@ function scrollToBottom() {
 }
 
 .voxel-input-note {
-  flex: 0.5;
+  flex: 0.4;
 }
 
 .voxel-input::placeholder {
-  color: #999;
+  color: #aaa;
 }
 
-.voxel-textarea-row {
+.voxel-editor-row {
   display: flex;
-  align-items: flex-end;
+  flex-direction: column;
 }
 
 .voxel-textarea {
   flex: 1;
-  padding: 12px 16px;
+  padding: 10px 12px;
   border: none;
   outline: none;
   font-size: 14px;
   resize: none;
-  min-height: 60px;
-  max-height: 120px;
+  min-height: 50px;
+  max-height: 100px;
   font-family: inherit;
+  line-height: 1.5;
 }
 
 .voxel-textarea::placeholder {
-  color: #999;
+  color: #aaa;
+}
+
+.voxel-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 8px 12px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.voxel-actions-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.voxel-toolbar {
+  display: flex;
+  gap: 4px;
+}
+
+.voxel-tool-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 18px;
+  transition: background 0.2s;
+}
+
+.voxel-tool-btn:hover {
+  background: #f0f0f0;
 }
 
 .voxel-submit {
   background: #12b7f5;
   color: #fff;
   border: none;
-  padding: 10px 20px;
-  margin: 10px;
+  padding: 8px 24px;
   border-radius: 4px;
   cursor: pointer;
   font-size: 14px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
   transition: background 0.2s;
 }
 
@@ -347,11 +528,6 @@ function scrollToBottom() {
   cursor: not-allowed;
 }
 
-.voxel-submit-arrow {
-  font-size: 12px;
-}
-
-/* 滚动条美化 */
 .voxel-messages::-webkit-scrollbar {
   width: 6px;
 }
