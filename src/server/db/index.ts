@@ -19,6 +19,14 @@ export interface CommentRow {
   created_at: number
 }
 
+export interface ImageRow {
+  id: string
+  data: Buffer
+  thumbnail: Buffer
+  mime_type: string
+  created_at: number
+}
+
 export async function initDatabase(): Promise<void> {
   // 数据库放在 src/server/data 目录下
   const dbPath = process.env.DB_PATH || path.join(__dirname, '../data/voxel.db')
@@ -49,6 +57,17 @@ export async function initDatabase(): Promise<void> {
   // 创建索引
   db.exec(`CREATE INDEX IF NOT EXISTS idx_comments_url ON comments(url)`)
   db.exec(`CREATE INDEX IF NOT EXISTS idx_comments_created ON comments(created_at)`)
+  
+  // 创建图片表（存储发送成功的图片）
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS images (
+      id TEXT PRIMARY KEY,
+      data BLOB NOT NULL,
+      thumbnail BLOB NOT NULL,
+      mime_type TEXT NOT NULL,
+      created_at INTEGER NOT NULL
+    )
+  `)
   
   console.log('Database initialized')
 }

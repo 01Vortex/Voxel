@@ -1,0 +1,437 @@
+.voxel-comment {
+  display: flex;
+  flex-direction: column;
+  height: 600px;
+  max-height: 600px;
+  background: linear-gradient(180deg, #d4f1f9 0%, #e8f7fc 100%);
+  border-radius: 8px;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  position: relative;
+  isolation: isolate;
+  contain: strict;
+}
+
+.voxel-messages {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-anchor: none;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  contain: layout;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.voxel-loading,
+.voxel-empty {
+  text-align: center;
+  color: #999;
+  padding: 40px;
+}
+
+.voxel-time-divider {
+  text-align: center;
+  padding: 8px 0;
+}
+
+.voxel-time-divider span {
+  font-size: 12px;
+  color: #999;
+  background: rgba(255, 255, 255, 0.6);
+  padding: 4px 12px;
+  border-radius: 10px;
+}
+
+.voxel-message {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  max-width: 80%;
+}
+
+.voxel-message.is-self {
+  margin-left: auto;
+  flex-direction: row-reverse;
+}
+
+.voxel-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  object-fit: cover;
+}
+
+.voxel-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.voxel-nickname {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.voxel-name {
+  font-size: 13px;
+  color: #333;
+  font-weight: 500;
+}
+
+.voxel-note {
+  font-size: 11px;
+  color: #999;
+  background: #f0f0f0;
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+
+.voxel-message.is-self .voxel-nickname {
+  flex-direction: row-reverse;
+}
+
+.voxel-bubble {
+  background: #fff;
+  padding: 10px 14px;
+  border-radius: 8px;
+  position: relative;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  word-break: break-word;
+}
+
+.voxel-message.is-self .voxel-bubble {
+  background: #12b7f5;
+  color: #fff;
+}
+
+.voxel-content {
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.voxel-content :deep(.voxel-img) {
+  max-width: 280px;
+  max-height: 280px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.voxel-content :deep(.voxel-img:last-child) {
+  margin-bottom: 0;
+}
+
+/* 纯图片消息样式 */
+.voxel-bubble.is-image-only {
+  background: transparent;
+  padding: 0;
+  box-shadow: none;
+}
+
+.voxel-bubble.is-image-only .voxel-img {
+  border-radius: 12px;
+  max-width: 300px;
+  max-height: 300px;
+}
+
+.voxel-emoji-wrapper {
+  position: relative;
+}
+
+.voxel-emoji-popup {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 8px;
+  width: 340px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  z-index: 100;
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+
+.voxel-emoji-tabs {
+  display: flex;
+  padding: 8px 12px;
+  gap: 4px;
+  border-bottom: 1px solid #f0f0f0;
+  background: #fafafa;
+}
+
+.voxel-emoji-tab {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 20px;
+  transition: all 0.2s;
+}
+
+.voxel-emoji-tab:hover {
+  background: #e8e8e8;
+}
+
+.voxel-emoji-tab.active {
+  background: #12b7f5;
+}
+
+.voxel-emoji-list {
+  display: flex;
+  flex-wrap: wrap;
+  padding: 12px;
+  max-height: 180px;
+  overflow-y: auto;
+  gap: 4px;
+}
+
+.voxel-emoji-item {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 6px;
+  font-size: 22px;
+  transition: all 0.2s;
+}
+
+.voxel-emoji-item:hover {
+  background: #f0f0f0;
+  transform: scale(1.2);
+}
+
+.voxel-input-area {
+  flex-shrink: 0;
+  background: #fff;
+  border-top: 1px solid #e0e0e0;
+}
+
+.voxel-input-row {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 8px 12px;
+  gap: 12px;
+}
+
+.voxel-input-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  object-fit: cover;
+  background: #e0e0e0;
+}
+
+.voxel-input-field {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  background: #fff;
+}
+
+.voxel-input-label {
+  font-size: 13px;
+  color: #666;
+  flex-shrink: 0;
+}
+
+.voxel-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 13px;
+  min-width: 0;
+  padding: 0;
+}
+
+.voxel-input::placeholder {
+  color: #aaa;
+}
+
+.voxel-editor-row {
+  display: flex;
+  flex-direction: column;
+}
+
+
+
+.voxel-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 8px 12px;
+  height: 48px;
+  box-sizing: border-box;
+}
+
+.voxel-actions-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.voxel-toolbar {
+  display: flex;
+  gap: 4px;
+}
+
+.voxel-tool-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  color: #666;
+  transition: background 0.2s, color 0.2s;
+}
+
+.voxel-tool-btn:hover {
+  background: #f0f0f0;
+  color: #12b7f5;
+}
+
+.voxel-tool-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+.voxel-submit {
+  background: #12b7f5;
+  color: #fff;
+  border: none;
+  padding: 8px 0;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  width: 70px;
+  height: 32px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.voxel-submit:hover:not(:disabled) {
+  background: #0ea5e0;
+}
+
+.voxel-submit:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.voxel-messages::-webkit-scrollbar {
+  display: none;
+}
+
+
+/* 富文本编辑器 */
+.voxel-editor {
+  min-height: 60px;
+  max-height: 150px;
+  overflow-y: auto;
+  padding: 10px 12px;
+  font-size: 14px;
+  line-height: 1.5;
+  outline: none;
+  word-break: break-word;
+}
+
+.voxel-editor:empty::before {
+  content: attr(data-placeholder);
+  color: #aaa;
+  pointer-events: none;
+}
+
+.voxel-editor img.voxel-editor-img {
+  display: inline-block;
+  width: 60px !important;
+  height: 60px !important;
+  object-fit: cover;
+  border-radius: 6px;
+  vertical-align: middle;
+  margin: 2px;
+  cursor: default;
+}
+
+.voxel-editor img {
+  width: 60px !important;
+  height: 60px !important;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+
+/* 图片预览弹窗 */
+.voxel-preview-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  cursor: zoom-out;
+}
+
+.voxel-preview-img {
+  max-width: 90vw;
+  max-height: 90vh;
+  object-fit: contain;
+  border-radius: 4px;
+  cursor: default;
+}
+
+/* 图片可双击预览提示 */
+.voxel-content :deep(.voxel-img) {
+  cursor: zoom-in;
+}
+
+/* 右键菜单 */
+.voxel-context-menu {
+  position: fixed;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 4px 0;
+  min-width: 80px;
+  z-index: 10000;
+}
+
+.voxel-context-item {
+  padding: 8px 16px;
+  font-size: 14px;
+  color: #333;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.voxel-context-item:hover {
+  background: #f5f5f5;
+}
