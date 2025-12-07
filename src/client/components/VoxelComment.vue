@@ -47,10 +47,11 @@
           <div class="voxel-actions-right">
             <div class="voxel-toolbar">
               <div class="voxel-emoji-wrapper" ref="emojiWrapperRef">
-                <button class="voxel-tool-btn" @click.stop="showEmoji = !showEmoji" title="表情">😊</button>
+                <button type="button" class="voxel-tool-btn" @click.stop="showEmoji = !showEmoji" title="表情">😊</button>
                 <div v-if="showEmoji" class="voxel-emoji-popup">
                   <div class="voxel-emoji-tabs">
                     <button
+                      type="button"
                       v-for="(cat, idx) in emojiCategories"
                       :key="cat.name"
                       class="voxel-emoji-tab"
@@ -69,7 +70,7 @@
                   </div>
                 </div>
               </div>
-              <button class="voxel-tool-btn" @click="triggerImageUpload" title="图片">🖼️</button>
+              <button type="button" class="voxel-tool-btn" @click="triggerImageUpload" title="图片">🖼️</button>
               <input
                 ref="imageInputRef"
                 type="file"
@@ -78,7 +79,7 @@
                 @change="handleImageUpload"
               />
             </div>
-            <button class="voxel-submit" @click="handleSubmit" :disabled="submitting">
+            <button type="button" class="voxel-submit" @click.prevent="handleSubmit" :disabled="submitting">
               {{ submitting ? '...' : '发送' }}
             </button>
           </div>
@@ -147,16 +148,23 @@ function shouldShowTime(index: number): boolean {
 // 滚动到底部
 function scrollToBottom() {
   nextTick(() => {
-    if (messagesRef.value) {
-      messagesRef.value.scrollTop = messagesRef.value.scrollHeight
-    }
+    requestAnimationFrame(() => {
+      if (messagesRef.value) {
+        messagesRef.value.scrollTop = messagesRef.value.scrollHeight
+      }
+    })
   })
 }
 
 // 提交评论
 async function handleSubmit() {
+  // 记录当前页面滚动位置
+  const pageScrollY = window.scrollY
+  
   const success = await submitComment()
   if (success) {
+    // 恢复页面滚动位置，防止抖动
+    window.scrollTo(0, pageScrollY)
     scrollToBottom()
   }
 }
@@ -226,22 +234,29 @@ onUnmounted(() => {
 .voxel-comment {
   display: flex;
   flex-direction: column;
-  height: 500px;
-  max-height: 500px;
+  height: 600px;
+  max-height: 600px;
   background: linear-gradient(180deg, #d4f1f9 0%, #e8f7fc 100%);
   border-radius: 8px;
   overflow: hidden;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  position: relative;
+  isolation: isolate;
+  contain: strict;
 }
 
 .voxel-messages {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  overflow-anchor: none;
   padding: 20px;
   display: flex;
   flex-direction: column;
   gap: 16px;
+  contain: layout;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 .voxel-loading,
@@ -272,7 +287,7 @@ onUnmounted(() => {
 }
 
 .voxel-message.is-self {
-  align-self: flex-end;
+  margin-left: auto;
   flex-direction: row-reverse;
 }
 
@@ -358,6 +373,7 @@ onUnmounted(() => {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   z-index: 100;
   overflow: hidden;
+  overscroll-behavior: contain;
 }
 
 .voxel-emoji-tabs {
@@ -461,8 +477,7 @@ onUnmounted(() => {
   outline: none;
   font-size: 14px;
   resize: none;
-  min-height: 50px;
-  max-height: 100px;
+  height: 50px;
   font-family: inherit;
   line-height: 1.5;
 }
@@ -476,7 +491,8 @@ onUnmounted(() => {
   align-items: center;
   justify-content: flex-end;
   padding: 8px 12px;
-  border-top: 1px solid #f0f0f0;
+  height: 48px;
+  box-sizing: border-box;
 }
 
 .voxel-actions-right {
@@ -512,14 +528,17 @@ onUnmounted(() => {
   background: #12b7f5;
   color: #fff;
   border: none;
-  padding: 8px 24px;
+  padding: 8px 0;
   border-radius: 4px;
   cursor: pointer;
   font-size: 14px;
-  transition: background 0.2s;
+  width: 70px;
+  height: 32px;
+  text-align: center;
+  flex-shrink: 0;
 }
 
-.voxel-submit:hover {
+.voxel-submit:hover:not(:disabled) {
   background: #0ea5e0;
 }
 
@@ -529,15 +548,6 @@ onUnmounted(() => {
 }
 
 .voxel-messages::-webkit-scrollbar {
-  width: 6px;
-}
-
-.voxel-messages::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 3px;
-}
-
-.voxel-messages::-webkit-scrollbar-track {
-  background: transparent;
+  display: none;
 }
 </style>
