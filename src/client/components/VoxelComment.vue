@@ -50,16 +50,6 @@
       </div>
     </Teleport>
 
-    <!-- 管理后台登录 -->
-    <Teleport to="body">
-      <AdminLogin
-        v-if="showAdminLogin"
-        :api-base="props.apiBase"
-        @login-success="handleAdminLoginSuccess"
-        @close="showAdminLogin = false"
-      />
-    </Teleport>
-
     <!-- 输入区域 -->
     <div class="voxel-input-area">
       <div class="voxel-input-row">
@@ -153,7 +143,6 @@ import { renderContent, isImageOnly } from '../utils/content'
 import { emojiCategories } from '../constants/emoji'
 import { getAvatar } from '../utils'
 import { useClosePopup } from '../utils/close_popup'
-import AdminLogin from './AdminLogin.vue'
 
 const props = defineProps<{
   url?: string
@@ -235,15 +224,6 @@ async function copyContent() {
 
 // 使用工具函数处理 ESC 键关闭
 useClosePopup(previewImage, closePreview)
-
-// 管理后台
-const showAdminLogin = ref(false)
-
-function handleAdminLoginSuccess(token: string) {
-  showAdminLogin.value = false
-  // 跳转到管理后台或显示管理面板
-  window.open(`${props.apiBase || ''}/admin?token=${token}`, '_blank')
-}
 
 // 处理图片双击预览
 function handleImageDblClick(e: MouseEvent) {
@@ -344,13 +324,6 @@ function handlePaste(e: ClipboardEvent) {
 
 // 提交评论
 async function handleSubmit() {
-  // 检查是否是管理员命令
-  if (form.nickname.trim() === '/admin') {
-    form.nickname = ''
-    showAdminLogin.value = true
-    return
-  }
-  
   // 记录当前页面滚动位置
   const pageScrollY = window.scrollY
   

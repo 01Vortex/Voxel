@@ -5,30 +5,30 @@ import hljs from 'highlight.js'
 const renderer = new marked.Renderer()
 
 // 自定义代码块
-renderer.code = function (code: string, language?: string): string {
-  const lang = language || ''
+renderer.code = function ({ text, lang }: { text: string; lang?: string }): string {
+  const language = lang || ''
   let highlighted: string
 
-  if (lang && hljs.getLanguage(lang)) {
+  if (language && hljs.getLanguage(language)) {
     try {
-      highlighted = hljs.highlight(code, { language: lang }).value
+      highlighted = hljs.highlight(text, { language }).value
     } catch {
-      highlighted = hljs.highlightAuto(code).value
+      highlighted = hljs.highlightAuto(text).value
     }
   } else {
-    highlighted = hljs.highlightAuto(code).value
+    highlighted = hljs.highlightAuto(text).value
   }
 
-  return `<pre class="voxel-code hljs" data-lang="${lang}"><code class="language-${lang}">${highlighted}</code></pre>`
+  return `<pre class="voxel-code hljs" data-lang="${language}"><code class="language-${language}">${highlighted}</code></pre>`
 }
 
 // 自定义行内代码
-renderer.codespan = function (code: string): string {
-  return `<code class="voxel-inline-code">${code}</code>`
+renderer.codespan = function ({ text }: { text: string }): string {
+  return `<code class="voxel-inline-code">${text}</code>`
 }
 
 // 自定义链接（新窗口打开）
-renderer.link = function (href: string | null, title: string | null, text: string): string {
+renderer.link = function ({ href, title, text }: { href: string; title: string | null; text: string }): string {
   const url = href || ''
   const titleAttr = title ? ` title="${title}"` : ''
   return `<a href="${url}"${titleAttr} target="_blank" rel="noopener noreferrer" class="voxel-link">${text}</a>`
@@ -45,8 +45,14 @@ marked.setOptions({
 export function renderContent(content: string): string {
   if (!content) return ''
 
-  // 先处理图片标记，转换为占位符
-  let processed = content.replace(/\[img\](.*?)\[\/img\]/g, '{{VOXEL_IMG:$1}}')
+  // 先提取所有图片并直接转换为HTML，不经过marked处理
+  const images: string[] = []
+  let processed = content.replace(/\[img\](.*?)\[\/img\]/g, (_, url) => {
+    const index = images.length
+    images.push(url)
+    // 使用HTML注释作为占位符，marked不会处理它
+    return `<!--VXIMG${index}-->`
+  })
 
   // 处理行内代码块格式 ```lang code``` 转为标准格式
   processed = processed.replace(/```(\w*)\s*([^`]+)```/g, (_, lang, code) => {
@@ -56,11 +62,13 @@ export function renderContent(content: string): string {
   // 使用 marked 解析 Markdown
   let html = marked.parse(processed) as string
 
-  // 还原图片标记为自定义格式
-  html = html.replace(
-    /\{\{VOXEL_IMG:(.*?)\}\}/g,
-    '<img class="voxel-img" src="$1" alt="图片" data-preview="$1" />'
-  )
+  // 还原图片
+  images.forEach((url, index) => {
+    html = html.replace(
+      `<!--VXIMG${index}-->`,
+      `<img class="voxel-img" src="${url}" alt="图片" data-preview="${url}" />`
+    )
+  })
 
   return html
 }

@@ -126,11 +126,37 @@ adminRouter.get('/comments', authMiddleware, (req: Request, res: Response) => {
     const page = parseInt(req.query.page as string) || 1
     const limit = parseInt(req.query.limit as string) || 20
     const offset = (page - 1) * limit
+    const keyword = req.query.keyword as string || ''
+    const urlFilter = req.query.url as string || ''
     
-    const total = (db.prepare('SELECT COUNT(*) as count FROM comments').get() as { count: number }).count
-    const comments = db.prepare(`
-      SELECT * FROM comments ORDER BY created_at DESC LIMIT ? OFFSET ?
-    `).all(limit, offset)
+    let whereClause = '1=1'
+    const params: any[] = []
+    
+    if (keyword) {
+      whereClause += ' AND (content LIKE ? OR nickname LIKE ? OR email LIKE ?)'
+      params.push(`%${keyword}%`, `%${keyword}%`, `%${keyword}%`)
+    }
+    if (urlFilter) {
+      whereClause += ' AND url = ?'
+      params.push(urlFilter)
+    }
+    
+    const total = (db.prepare(`SELECT COUNT(*) as count FROM comments WHERE ${whereClause}`).get(...params) as { count: number }).count
+    const rows = db.prepare(`
+      SELECT * FROM comments WHERE ${whereClause} ORDER BY created_at DESC LIMIT ? OFFSET ?
+    `).all(...params, limit, offset) as any[]
+    
+    // 转换字段名为驼峰格式
+    const comments = rows.map(row => ({
+      id: row.id,
+      url: row.url,
+      nickname: row.nickname,
+      email: row.email,
+      content: row.content,
+      avatar: row.avatar,
+      createdAt: row.created_at,
+      isOwner: row.is_owner
+    }))
     
     res.json({ success: true, data: { comments, total, page, limit } })
   } catch (e: any) {
@@ -145,6 +171,72 @@ adminRouter.delete('/comments/:id', authMiddleware, (req: Request, res: Response
     const db = getDb()
     db.prepare('DELETE FROM comments WHERE id = ?').run(id)
     res.json({ success: true })
+  } catch (e: any) {
+    res.json({ success: false, message: e.message })
+  }
+})
+
+// 获取所有页面URL列表
+adminRouter.get('/urls', authMiddleware, (req: Request, res: Response) => {
+  try {
+    const db = getDb()
+    const rows = db.prepare('SELECT DISTINCT url FROM comments ORDER BY url').all() as { url: string }[]
+    const urls = rows.map(r => r.url)
+    res.json({ success: true, data: urls })
+  } catch (e: any) {
+    res.json({ success: false, message: e.message })
+  }
+})
+
+// 获取配置
+adminRouter.get('/config', authMiddleware, (req: Request, res: Response) => {
+  try {
+    const db = getDb()
+    const rows = db.prepare('SELECT key, value FROM config WHERE key != ?').all('admin_password') as { key: string; value: string }[]
+    const config: Record<string, string> = {}
+    rows.forEach(r => {
+      config[r.key] = r.value
+    })
+    res.json({ success: true, data: config })
+  } catch (e: any) {
+    res.json({ success: false, message: e.message })
+  }
+})
+
+// 保存配置
+adminRouter.post('/config', authMiddleware, (req: Request, res: Response) => {
+  try {
+    const db = getDb()
+    const { siteName, adminEmail, pageSize } = req.body
+    
+    const stmt = db.prepare('INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)')
+    if (siteName !== undefined) stmt.run('site_name', siteName)
+    if (adminEmail !== undefined) stmt.run('admin_email', adminEmail)
+    if (pageSize !== undefined) stmt.run('page_size', String(pageSize))
+    
+    res.json({ success: true })
+  } catch (e: any) {
+    res.json({ success: false, message: e.message })
+  }
+})
+
+// 获取统计数据
+adminRouter.get('/stats', authMiddleware, (req: Request, res: Response) => {
+  try {
+    const db = getDb()
+    const totalComments = (db.prepare('SELECT COUNT(*) as count FROM comments').get() as { count: number }).count
+    const totalPages = (db.prepare('SELECT COUNT(DISTINCT url) as count FROM comments').get() as { count: number }).count
+    const todayStart = new Date().setHours(0, 0, 0, 0)
+    const todayComments = (db.prepare('SELECT COUNT(*) as count FROM comments WHERE created_at >= ?').get(todayStart) as { count: number }).count
+    
+    res.json({
+      success: true,
+      data: {
+        totalComments,
+        totalPages,
+        todayComments
+      }
+    })
   } catch (e: any) {
     res.json({ success: false, message: e.message })
   }

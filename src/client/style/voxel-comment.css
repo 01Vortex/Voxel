@@ -1,8 +1,8 @@
 .voxel-comment {
   display: flex;
   flex-direction: column;
-  height: 600px;
-  max-height: 600px;
+  height: 800px;
+  max-height: 800px;
   background: linear-gradient(180deg, #d4f1f9 0%, #e8f7fc 100%);
   border-radius: 8px;
   overflow: hidden;
