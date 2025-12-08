@@ -71,8 +71,9 @@ commentRouter.post('/', (req: Request, res: Response) => {
       return res.json({ success: false, message: '缺少页面地址' })
     }
     
-    // 简单的内容过滤
-    const safeContent = escapeHtml(content.trim())
+    // 内容不转义，由前端 marked 处理 XSS
+    // 昵称需要转义防止 XSS
+    const safeContent = content.trim()
     const safeNickname = escapeHtml(nickname.trim())
     
     const db = getDb()

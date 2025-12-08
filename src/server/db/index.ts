@@ -69,6 +69,14 @@ export async function initDatabase(): Promise<void> {
     )
   `)
   
+  // 创建配置表（存储管理员密码等）
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS config (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    )
+  `)
+  
   console.log('Database initialized')
 }
 

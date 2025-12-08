@@ -2,6 +2,7 @@ import express from 'express'
 import cors from 'cors'
 import { commentRouter } from './routes/comment'
 import { uploadRouter, startCleanupScheduler } from './routes/upload'
+import { adminRouter } from './routes/admin'
 import { initDatabase } from './db'
 
 const app = express()
@@ -14,6 +15,7 @@ app.use(express.json({ limit: '12mb' })) // 增加请求体大小限制，支持
 // 路由
 app.use('/api/comment', commentRouter)
 app.use('/api/upload', uploadRouter)
+app.use('/api/admin', adminRouter)
 
 // 健康检查
 app.get('/api/health', (req, res) => {

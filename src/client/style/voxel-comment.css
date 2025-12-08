@@ -435,3 +435,119 @@
 .voxel-context-item:hover {
   background: #f5f5f5;
 }
+
+/* Markdown 样式 */
+.voxel-content :deep(p) {
+  margin: 0 0 8px 0;
+}
+
+.voxel-content :deep(p:last-child) {
+  margin-bottom: 0;
+}
+
+.voxel-content :deep(strong) {
+  font-weight: 600;
+}
+
+.voxel-content :deep(em) {
+  font-style: italic;
+}
+
+.voxel-content :deep(del) {
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
+.voxel-content :deep(blockquote) {
+  margin: 8px 0;
+  padding: 8px 12px;
+  border-left: 3px solid #12b7f5;
+  background: rgba(18, 183, 245, 0.1);
+  border-radius: 0 4px 4px 0;
+}
+
+.voxel-content :deep(ul),
+.voxel-content :deep(ol) {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.voxel-content :deep(li) {
+  margin: 4px 0;
+}
+
+/* 行内代码 - macOS 风格 */
+.voxel-content :deep(.voxel-inline-code) {
+  background: #f5f5f5;
+  color: #c41a16;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Menlo', 'Monaco', 'Consolas', 'Liberation Mono', monospace;
+  font-size: 0.9em;
+}
+
+.voxel-message.is-self .voxel-content :deep(.voxel-inline-code) {
+  background: rgba(255, 255, 255, 0.3);
+  color: #fff;
+}
+
+/* 代码块 - VS Code 风格 */
+.voxel-content :deep(pre) {
+  margin: 8px 0;
+  padding: 12px 16px;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-family: 'Menlo', 'Monaco', 'Consolas', 'Liberation Mono', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.voxel-content :deep(.voxel-code) {
+  background: #f5f5f5;
+  color: #000;
+}
+
+.voxel-message.is-self .voxel-content :deep(.voxel-code) {
+  background: #f5f5f5 !important;
+  color: #000;
+}
+
+.voxel-content :deep(pre code) {
+  background: none;
+  padding: 0;
+  color: inherit;
+}
+
+/* 链接 */
+.voxel-content :deep(.voxel-link) {
+  color: #12b7f5;
+  text-decoration: none;
+}
+
+.voxel-content :deep(.voxel-link:hover) {
+  text-decoration: underline;
+}
+
+.voxel-message.is-self .voxel-content :deep(.voxel-link) {
+  color: #fff;
+  text-decoration: underline;
+}
+
+/* 表格 */
+.voxel-content :deep(table) {
+  border-collapse: collapse;
+  margin: 8px 0;
+  width: 100%;
+}
+
+.voxel-content :deep(th),
+.voxel-content :deep(td) {
+  border: 1px solid #e0e0e0;
+  padding: 6px 10px;
+  text-align: left;
+}
+
+.voxel-content :deep(th) {
+  background: rgba(0, 0, 0, 0.04);
+  font-weight: 600;
+}

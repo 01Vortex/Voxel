@@ -50,6 +50,16 @@
       </div>
     </Teleport>
 
+    <!-- 管理后台登录 -->
+    <Teleport to="body">
+      <AdminLogin
+        v-if="showAdminLogin"
+        :api-base="props.apiBase"
+        @login-success="handleAdminLoginSuccess"
+        @close="showAdminLogin = false"
+      />
+    </Teleport>
+
     <!-- 输入区域 -->
     <div class="voxel-input-area">
       <div class="voxel-input-row">
@@ -143,6 +153,7 @@ import { renderContent, isImageOnly } from '../utils/content'
 import { emojiCategories } from '../constants/emoji'
 import { getAvatar } from '../utils'
 import { useClosePopup } from '../utils/close_popup'
+import AdminLogin from './AdminLogin.vue'
 
 const props = defineProps<{
   url?: string
@@ -225,6 +236,15 @@ async function copyContent() {
 // 使用工具函数处理 ESC 键关闭
 useClosePopup(previewImage, closePreview)
 
+// 管理后台
+const showAdminLogin = ref(false)
+
+function handleAdminLoginSuccess(token: string) {
+  showAdminLogin.value = false
+  // 跳转到管理后台或显示管理面板
+  window.open(`${props.apiBase || ''}/admin?token=${token}`, '_blank')
+}
+
 // 处理图片双击预览
 function handleImageDblClick(e: MouseEvent) {
   const target = e.target as HTMLElement
@@ -274,34 +294,37 @@ function scrollToBottom() {
 // 从编辑器获取内容和图片ID
 function getEditorContent(): { content: string; imageIds: string[] } {
   if (!editorRef.value) return { content: '', imageIds: [] }
-  
-  let content = ''
+
   const imageIds: string[] = []
-  const walker = document.createTreeWalker(
-    editorRef.value,
-    NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT,
-    null
-  )
-  
-  let node: Node | null
-  while ((node = walker.nextNode())) {
-    if (node.nodeType === Node.TEXT_NODE) {
-      content += node.textContent
-    } else if (node.nodeType === Node.ELEMENT_NODE) {
-      const el = node as HTMLElement
-      if (el.tagName === 'IMG' && el.dataset.url) {
-        // 提取图片ID（从URL中）
-        const match = el.dataset.url.match(/Vx_[A-Za-z0-9]{6}/)
-        if (match) {
-          imageIds.push(match[0])
-        }
-        content += `[img]${el.dataset.url}[/img]`
-      } else if (el.tagName === 'BR') {
-        content += '\n'
-      }
+
+  // 克隆节点处理
+  const clone = editorRef.value.cloneNode(true) as HTMLElement
+
+  // 处理图片
+  clone.querySelectorAll('img[data-url]').forEach((img) => {
+    const url = (img as HTMLElement).dataset.url || ''
+    const match = url.match(/Vx_[A-Za-z0-9]{6}/)
+    if (match) {
+      imageIds.push(match[0])
     }
-  }
-  
+    img.replaceWith(`[img]${url}[/img]`)
+  })
+
+  // 处理换行：br 和 div 都转为换行
+  clone.querySelectorAll('br').forEach((br) => br.replaceWith('\n'))
+  clone.querySelectorAll('div').forEach((div) => {
+    // div 前面加换行（除非是第一个）
+    if (div.previousSibling) {
+      div.insertAdjacentText('beforebegin', '\n')
+    }
+  })
+
+  // 获取纯文本
+  let content = clone.textContent || ''
+
+  // 清理多余换行
+  content = content.replace(/\n{3,}/g, '\n\n')
+
   return { content: content.trim(), imageIds }
 }
 
@@ -321,6 +344,13 @@ function handlePaste(e: ClipboardEvent) {
 
 // 提交评论
 async function handleSubmit() {
+  // 检查是否是管理员命令
+  if (form.nickname.trim() === '/admin') {
+    form.nickname = ''
+    showAdminLogin.value = true
+    return
+  }
+  
   // 记录当前页面滚动位置
   const pageScrollY = window.scrollY
   
